@@ -27,13 +27,15 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import matplotlib.pyplot as plt
 
 # =========================================================
-# 1. Environment
+# 1. Environment: Causal Multi-Join Query Simulator
 # =========================================================
 class CausalDatabaseEnv:
     """
-    Simulated multi-join query environment with causal relationships.
-    Reward = negative execution cost (lower cost is better).
+    Simulated multi-join query environment.
+    Reward = negative execution cost.
+    Lower cost => higher reward.
     """
+
     def __init__(self, num_tables=10, seed=SEED):
         self.rng = random.Random(seed)
         self.tables = [f"T{i}" for i in range(num_tables)]
@@ -59,11 +61,7 @@ class CausalDatabaseEnv:
         )
 
     def get_optimal_action(self):
-        """
-        Oracle heuristic used only for:
-        - supervised baselines
-        - evaluation reference
-        """
+        """Oracle heuristic (used only for evaluation and supervised baselines)."""
         if not self.join_path:
             return self.tables.index(self.tables[0])
 
@@ -174,8 +172,6 @@ def train_dqn(
                 action = available[np.argmax([q_values[i] for i in available])]
 
             next_state, reward, done, _ = env.step(action)
-
-            # Scale rewards to stabilize learning
             scaled_reward = reward / 1000.0
 
             memory.push(state, action, scaled_reward, next_state, done)
@@ -246,7 +242,7 @@ def evaluate_join_quality(env, model, episodes=100):
     return acc, p, r, f1
 
 # =========================================================
-# 5. Supervised Baseline Dataset (Oracle Labels)
+# 5. Supervised Baseline Dataset
 # =========================================================
 def generate_dataset(env, episodes=500):
     X, y = [], []
@@ -301,7 +297,7 @@ def main():
     # =====================================================
     # Results Output
     # =====================================================
-    print("\n=== Optimization Quality (Primary Metric) ===")
+    print("\n=== Optimization Quality (Primary Objective) ===")
     print(f"DQN Cumulative Reward    : {dqn_cumulative:.2f}")
     print(f"Optimal Policy Reward    : {optimal_cumulative:.2f}")
     print(f"Average Episode Reward   : {dqn_avg_reward:.2f}")
@@ -312,7 +308,6 @@ def main():
     print("-" * len(header))
 
     print(f"{'CG-RL DQN':<20}{dqn_metrics[0]:>10.4f}{dqn_metrics[1]:>12.4f}{dqn_metrics[2]:>10.4f}{dqn_metrics[3]:>8.4f}")
-
     for name, m in baseline_results.items():
         print(f"{name:<20}{m['Accuracy']:>10.4f}{m['Precision']:>12.4f}{m['Recall']:>10.4f}{m['F1-score']:>8.4f}")
 
@@ -329,10 +324,38 @@ def main():
 
     plt.figure(figsize=(6, 4))
     plt.bar(["DQN", "Optimal"], [dqn_cumulative, optimal_cumulative])
-    plt.title("Cumulative Reward Comparison (Lower Cost = Better)")
+    plt.title("Cumulative Reward Comparison")
     plt.ylabel("Scaled Cumulative Reward")
     plt.grid(axis="y")
     plt.show()
+
+    metrics_names = ["Accuracy", "Precision", "Recall", "F1-score"]
+    models = ["CG-RL DQN"] + list(baseline_results.keys())
+
+    values = [[dqn_metrics[i] for i in range(4)]]
+    for m in baseline_results.values():
+        values.append([m[k] for k in metrics_names])
+
+    values = np.array(values)
+    x = np.arange(len(metrics_names))
+    width = 0.18
+
+    plt.figure(figsize=(10, 6))
+    for i, model in enumerate(models):
+        plt.bar(x + i * width, values[i], width, label=model)
+
+    plt.xticks(x + width * (len(models) - 1) / 2, metrics_names)
+    plt.ylim(0, 1)
+    plt.ylabel("Score")
+    plt.title("Join Selection Quality Comparison")
+    plt.legend()
+    plt.grid(axis="y")
+    plt.show()
+
+    print("\n=== Learning Efficiency Summary ===")
+    print(f"Initial Reward : {dqn_rewards[0]:.2f}")
+    print(f"Final Reward   : {dqn_rewards[-1]:.2f}")
+    print(f"Best Reward    : {max(dqn_rewards):.2f}")
 
 # =========================================================
 # Entry Point
