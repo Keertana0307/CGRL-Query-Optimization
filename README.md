@@ -20,8 +20,3 @@ Traditional query optimizers struggle with hidden data correlations and large jo
 
 ## Results Summary
 The CG-RL agent demonstrates the ability to learn cost-efficient join strategies over time and reduce execution cost, though supervised baseline models may outperform it in static classification metrics.
-
-## Requirements
-Install dependencies using:
-```bash
-pip install -r requirements.txt
