@@ -4,6 +4,27 @@
 import random
 import numpy as np
 import torch
+# Upgrade dependencies first
+!pip install --upgrade pymongo dnspython
+
+import urllib.parse
+from pymongo import MongoClient
+
+# Encode password because it has special characters like '!'
+password = urllib.parse.quote_plus("Keertana2003!")  
+
+# Use SRV URI from MongoDB Atlas, include encoded password
+uri = f"mongodb+srv://keertana2930_db_user:{password}@dbms.g62tmb7.mongodb.net/?retryWrites=true&w=majority"
+
+# Connect with SSL and bypass minor certificate issues in Colab
+client = MongoClient(uri, ssl=True, tlsAllowInvalidCertificates=True)
+
+# Select your database
+db = client["query_experiment"]
+
+# Test connection
+print(client.list_database_names())
+
 
 SEED = 42
 random.seed(SEED)
